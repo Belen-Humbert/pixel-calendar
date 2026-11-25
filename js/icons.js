@@ -52,7 +52,7 @@ export function pixelArt(rows, palette, width, extra = '') {
 }
 
 export const ART = {
-  // él: rulos, lentes, buzo negro
+  // él: rulos, lentes, buzo azul
   alejo: [
     '.....HH.HHH.HH......',
     '...HHhHHHhHHHhHH....',
@@ -71,12 +71,12 @@ export const ART = {
     '..sSSSMTTTTTTMSSSs..',
     '...sSSSMMMMMMSSSs...',
     '....sSSSSSSSSSSs....',
-    '.....ssSSSSSSss.....',
-    '...KKKKKsSSsKKKKK...',
-    '.KKKKKKKKDKKDKKKKKK.',
-    'KKKKKKKKKDKKDKKKKKKK',
-    'KKkKKKKKKDKKDKKKKkKK',
-    'KKkKKKKKKKKKKKKKKkKK',
+    '......sSSSSSSs......',
+    '...CCCCsSSSSsCCCC...',
+    '..BBCCCCsSSsCCCCBB..',
+    '.BBBBBBCCCCCCBBBBBB.',
+    'BBBBBBBBDBBDBBBBBBBB',
+    'BbBBBBBBDBBDBBBBBBbB',
   ],
   alejoBlink: [
     '.....HH.HHH.HH......',
@@ -96,12 +96,12 @@ export const ART = {
     '..sSSSMTTTTTTMSSSs..',
     '...sSSSMMMMMMSSSs...',
     '....sSSSSSSSSSSs....',
-    '.....ssSSSSSSss.....',
-    '...KKKKKsSSsKKKKK...',
-    '.KKKKKKKKDKKDKKKKKK.',
-    'KKKKKKKKKDKKDKKKKKKK',
-    'KKkKKKKKKDKKDKKKKkKK',
-    'KKkKKKKKKKKKKKKKKkKK',
+    '......sSSSSSSs......',
+    '...CCCCsSSSSsCCCC...',
+    '..BBCCCCsSSsCCCCBB..',
+    '.BBBBBBCCCCCCBBBBBB.',
+    'BBBBBBBBDBBDBBBBBBBB',
+    'BbBBBBBBDBBDBBBBBBbB',
   ],
   spider: ['.P...P.', '..PPP..', 'PPPPPPP', '..PPP..', '.P...P.', 'P.....P'],
   // nube con flecha para "guardar en la nube"
@@ -134,7 +134,7 @@ export const ART = {
 };
 export const PAL = {
   alejo: { H: '#1d1620', h: '#463642', S: '#b07a55', s: '#8c5e40', G: '#605c5c', W: '#d6aa86', w: '#e8f4f7',
-    E: '#1a1414', M: '#5a262a', T: '#faf8f4', K: '#1c1c24', k: '#383846', D: '#c8c8d2' },
+    E: '#1a1414', M: '#5a262a', T: '#faf8f4', B: '#3b6fd8', b: '#2c56ad', C: '#244896', D: '#e6e9f5' },
   spider: { P: '#c9c6ee' },
   cloud: { L: '#d9d6f0', S: '#a9a4d6', D: '#17162a' },
   coin: { Y: '#ffd35a', O: '#c9971c' },
