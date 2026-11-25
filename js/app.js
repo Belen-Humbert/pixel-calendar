@@ -1,18 +1,38 @@
 import { icon } from './icons.js';
 import {
   CATS, CAT, dotColor, DN, DLONG, MES, ymd, parse, addDays, weekIdx, mondayOf, today, hm, plusMins,
-  dur, fmtH, shortDay, uid, load, save, eventsOn, eventsBetween, statusOf, weekStats,
+  dur, fmtH, shortDay, uid, now, load, save, eventsOn, eventsBetween, statusOf, weekStats,
+  monthStats, monthOf, monthName, addMonths, monthSummary, mergeStates, cloudPayload,
 } from './store.js';
+import { cloud, cloudConfigured, initCloud, login, logout, pushSoon } from './cloud.js';
 
 /* ---------- estado ---------- */
 let S = load();
 save(S);
-const ui = { sel: today(), wk: mondayOf(today()), tab: 'dia', detail: null, pick: null, editList: false };
+const ui = { sel: today(), wk: mondayOf(today()), tab: 'dia', detail: null, pick: null, editList: false, mode: 'semana', month: monthOf(today()) };
 
 const $ = s => document.querySelector(s);
 const main = $('#main'), veil = $('#veil'), sheet = $('#sheet');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-const commit = () => { save(S); render(); };
+const commit = () => { save(S); render(); sync(); };
+const touch = e => { e.u = now(); return e; };
+
+/* ---------- nube ---------- */
+function sync() {
+  if (!cloud.user) return;
+  const cur = monthOf(today());
+  pushSoon(cloudPayload(S), [monthSummary(S, addMonths(cur, -1)), monthSummary(S, cur)].filter(m => m.counts.done + m.counts.pending + m.counts.skipped + m.counts.moved), renderChrome);
+}
+function onRemote(data) {
+  if (data) {
+    // en un dispositivo nuevo, los ejemplos no se mezclan con los datos reales
+    if (S.events.length && S.events.every(e => e.demo)) S.events = [];
+    S = mergeStates(S, data);
+    save(S);
+    render();
+  }
+  sync(); // sube lo que la nube todavía no tiene (no hace nada si ya está igual)
+}
 const findEv = id => S.events.find(e => e.id === id);
 const chip = (cat, size = 20) => { const c = CAT[cat] || CAT.otra; return `<span class="chip" style="background:${c.chip}">${icon(cat in CAT ? cat : 'otra', size, c.color)}</span>`; };
 const weekLabel = m => { const a = parse(m), b = parse(addDays(m, 6)); return `${a.getDate()}${a.getMonth() !== b.getMonth() ? ' ' + MES[a.getMonth()] : ''}–${b.getDate()} ${MES[b.getMonth()]}`; };
@@ -43,6 +63,11 @@ function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add
 function renderChrome() {
   $('#coins').innerHTML = `${icon('coin', 16, '#ffd35a')}<span>${S.events.filter(e => e.status === 'done').length}</span>`;
   $('#sound').innerHTML = icon(S.sound ? 'sound' : 'mute', 16);
+  const dot = { ok: '#5be38a', syncing: '#ffd35a', error: '#ff8c99' }[cloud.status];
+  $('#acct').innerHTML = (cloud.user && cloud.user.photo
+    ? `<img src="${esc(cloud.user.photo)}" alt="" referrerpolicy="no-referrer">`
+    : icon(cloud.user ? 'user' : 'cloud', 16)) + (cloud.user && dot ? `<i class="dot" style="background:${dot}"></i>` : '');
+  $('#acct').setAttribute('aria-label', cloud.user ? `Cuenta: ${cloud.user.name}` : 'Guardar en la nube');
   $('#sound').setAttribute('aria-label', S.sound ? 'Silenciar' : 'Activar sonido');
   const T = { dia: ['cal', 'día'], series: ['tv', 'series'], stats: ['chart', 'stats'] };
   document.querySelectorAll('[data-tab]').forEach(b => {
@@ -85,6 +110,9 @@ function renderDay() {
   const lastMon = addDays(mondayOf(today()), -7);
   if (S.seenWeek !== lastMon && eventsBetween(S, lastMon, addDays(lastMon, 6)).length)
     banners += `<div class="banner"><p>¡Terminó la semana! Mirá cuánto le dedicaste a cada cosa.</p><button class="btn y sm" data-act="lastweek">ver resumen</button></div>`;
+  const lastMonth = addMonths(monthOf(today()), -1);
+  if (S.seenMonth !== lastMonth && monthStats(S, lastMonth).ev.length)
+    banners += `<div class="banner month"><p>${icon('trophy', 16, '#ffd35a')} ¡Terminó ${monthName(lastMonth)}! Mirá a qué le dedicaste más tiempo.</p><button class="btn y sm" data-act="lastmonth">ver el mes</button></div>`;
 
   const days = DN.map((n, i) => {
     const day = addDays(ui.wk, i), cats = [...new Set(eventsOn(S, day).map(e => e.cat))].slice(0, 4);
@@ -131,6 +159,7 @@ function renderSeries() {
 
 /* ---------- vista: stats ---------- */
 function renderStats() {
+  if (ui.mode === 'mes') return renderMonth();
   const W = weekStats(S, ui.wk), { n, pct, due } = W;
   const msg = !W.ev.length ? 'semana vacía' : !due ? '¡a jugar!' : pct >= 80 ? '¡nivel superado!' : pct >= 50 ? '¡buen nivel!' : 'nivel difícil';
   const txt = !W.ev.length ? 'Todavía no hay nada cargado esta semana.'
@@ -150,7 +179,7 @@ function renderStats() {
       <span class="bar"><i style="width:${w}%;background:${dotColor(r.cat.id)}"></i></span></div>`;
   }).join('');
 
-  main.innerHTML = `<div class="head-row" style="align-items:center"><h1 class="h1">resumen</h1></div>
+  main.innerHTML = `${statsHead()}
     ${weekNav()}
     <div class="stat-hero"><div class="top2"><span class="pct">${pct}%</span><div><div class="msg">${msg}</div><p>${txt}</p></div></div>
       <div class="segs">${Array.from({ length: 20 }, (_, i) => `<i class="${i < on ? 'on' : ''}"></i>`).join('')}</div></div>
@@ -158,12 +187,82 @@ function renderStats() {
     ${n.pending ? `<p class="pending-note">${n.pending} ${n.pending === 1 ? 'actividad pendiente' : 'actividades pendientes'} para los próximos días.</p>` : ''}
     <h2 class="sec-t"><span>tiempo por actividad</span><span>hecho / plan</span></h2>
     ${rows || '<p class="muted">Sin datos esta semana.</p>'}
-    <h2 class="sec-t" style="margin-top:22px"><span>respaldo</span></h2>
-    <div class="card"><span class="muted" style="font-size:14px">Los datos viven en este celular. Copiá el respaldo de vez en cuando y guardalo; para recuperarlo, pegalo acá.</span>
+    ${backupHtml()}`;
+}
+
+const statsHead = () => `<div class="head-row" style="align-items:center"><h1 class="h1">resumen</h1>
+  <div class="seg" role="group" aria-label="Período">${['semana', 'mes'].map(m => `<button data-act="mode" data-m="${m}" aria-pressed="${ui.mode === m}">${m}</button>`).join('')}</div></div>`;
+
+const backupHtml = () => `<h2 class="sec-t" style="margin-top:22px"><span>respaldo</span></h2>
+    <div class="card"><span class="muted" style="font-size:14px">${cloud.user ? 'Tus datos ya se guardan en tu cuenta de Google. Igual podés copiar un respaldo extra.' : 'Los datos viven en este celular. Copiá el respaldo de vez en cuando o entrá con Google para guardarlos en la nube.'}</span>
       <button class="btn o" data-act="export">copiar respaldo</button>
       <textarea class="field" id="imp" placeholder="Pegá acá un respaldo"></textarea>
       <button class="btn y" data-act="import">restaurar</button></div>`;
+
+/* ---------- vista: mes ---------- */
+function renderMonth() {
+  const M = monthStats(S, ui.month), { n, pct, due } = M;
+  const [y] = ui.month.split('-');
+  const isCur = ui.month === monthOf(today());
+  const ranked = M.rows.filter(r => r.done > 0);
+  const top = ranked.slice(0, 3);
+  const podium = top.length ? [top[1], top[0], top[2]].map((r, i) => {
+    if (!r) return '<div></div>';
+    const place = [2, 1, 3][i], h = [74, 104, 56][i];
+    return `<div class="pod">${chip(r.cat.id, 18)}<b>${esc(r.name)}</b><span>${fmtH(r.done)}</span>
+      <i style="height:${h}px;background:${dotColor(r.cat.id)}">${place}</i></div>`;
+  }).join('') : '';
+  const max = ranked.length ? ranked[0].done : 1;
+  const rows = M.rows.map(r => `<div class="crow">${chip(r.cat.id, 15)}<span class="nm">${esc(r.name)}</span>
+      <span class="h">${fmtH(r.done)}${r.cat.id === 'tv' ? '' : ' / ' + fmtH(r.plan)}</span>
+      <span class="bar"><i style="width:${Math.round((r.done / max) * 100)}%;background:${dotColor(r.cat.id)}"></i></span></div>`).join('');
+  const tvTop = Object.entries(M.lists.done.filter(e => e.cat === 'tv').reduce((a, e) => { a[e.title] = (a[e.title] || 0) + dur(e); return a; }, {}))
+    .sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const K = [['done', n.done, 'cumplidas', '#5be38a'], ['moved', n.moved, 'reprogramé', '#ffd35a'], ['skipped', n.skipped, 'no hice', '#ff8c99']];
+  const kpis = K.map(([id, v, l, c]) => `<div class="kpi"><b style="color:${c}">${v}</b><span>${l}</span></div>`).join('');
+
+  main.innerHTML = `${statsHead()}
+    <div class="weeknav"><button data-act="mo" data-n="-1" aria-label="Mes anterior">${icon('left', 14)}</button>
+      <span>${monthName(ui.month)} ${y}</span><button data-act="mo" data-n="1" aria-label="Mes siguiente">${icon('right', 14)}</button></div>
+    <div class="stat-hero"><div class="top2"><span class="pct hrs">${fmtH(M.total)}</span>
+      <div><div class="msg">${M.ev.length ? (isCur ? 'en lo que va del mes' : 'dedicadas en ' + monthName(ui.month)) : 'mes vacío'}</div>
+      <p>${M.ev.length ? `${pct}% cumplido de lo que tocaba · ${M.activeDays} ${M.activeDays === 1 ? 'día activo' : 'días activos'}` : 'No hay actividades cargadas este mes.'}</p></div></div></div>
+    ${top.length ? `<h2 class="sec-t"><span>${icon('trophy', 12, '#ffd35a')} a qué le dedicaste más tiempo</span></h2><div class="podium">${podium}</div>` : ''}
+    ${M.ev.length ? `<div class="kpis">${kpis}</div>` : ''}
+    ${rows ? `<h2 class="sec-t" style="margin-top:12px"><span>ranking del mes</span><span>hecho / plan</span></h2>${rows}` : ''}
+    ${tvTop.length ? `<h2 class="sec-t" style="margin-top:16px"><span>lo que más viste</span></h2><ul class="lines">${tvTop.map(([t, m]) => `<li><span class="w">${esc(t)}</span><span class="r">${fmtH(m)}</span></li>`).join('')}</ul>` : ''}
+    ${cloud.user ? '' : `<p class="pending-note" style="margin-top:12px">${icon('cloud', 12)} Entrá con Google (arriba a la derecha) para guardar tus meses en la nube.</p>`}`;
 }
+
+/* ---------- panel: cuenta ---------- */
+function openAccount() {
+  const draw = () => {
+    const u = cloud.user;
+    const when = cloud.lastSync ? new Date(cloud.lastSync).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const st = { ok: `guardado en la nube${when ? ' · ' + when : ''}`, syncing: 'guardando…', error: 'sin conexión: se guarda cuando vuelva internet', idle: '' }[cloud.status] || '';
+    sheet.innerHTML = `<div class="grab"></div>
+      <div class="sheet-head"><button class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x', 12)}</button><div><h2>${u ? 'tu cuenta' : 'guardar en la nube'}</h2></div></div>
+      ${!cloudConfigured ? `<p class="muted" style="margin:0">Todavía falta conectar Firebase (ver README). Mientras tanto los datos se guardan solo en este celular.</p>`
+      : u ? `<div class="acct-card">${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="chip" style="background:#2b2950">${icon('user', 20, '#b9b5e0')}</span>`}
+          <div><b>${esc(u.name)}</b><span>${esc(u.email)}</span></div></div>
+        <p class="sync-st">${icon('cloud', 14, cloud.status === 'error' ? '#ff8c99' : '#5be38a')} ${esc(st)}</p>
+        <p class="muted" style="margin:0;font-size:14px">Tus actividades y estadísticas se guardan en tu cuenta. Si cambiás de celular, entrás con Google y aparecen todas.</p>
+        <button class="btn o block" data-act="logout">cerrar sesión</button>`
+      : `<p class="muted" style="margin:0">Entrá con tu cuenta de Google para no perder nunca tus datos y guardar tus estadísticas de cada mes.</p>
+        <button class="btn y block" data-act="login">${icon('google', 16, '#17162a')} entrar con google</button>`}`;
+  };
+  sheet.onclick = async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'close') return closeSheet();
+    if (b.dataset.act === 'login') {
+      try { b.disabled = true; await login(); closeSheet(); if (cloud.user) toast(`¡hola, ${cloud.user.name.split(' ')[0].toLowerCase()}!`); } catch (err) { console.warn(err); toast('no se pudo entrar'); b.disabled = false; }
+    }
+    if (b.dataset.act === 'logout') { await logout(); toast('sesión cerrada'); closeSheet(); }
+  };
+  accountRedraw = () => { if (veil.classList.contains('on') && sheet.querySelector('.acct-card, [data-act=login]')) draw(); };
+  openSheet(''); draw();
+}
+let accountRedraw = () => {};
 
 function render() {
   renderChrome();
@@ -209,12 +308,12 @@ function openForm(existing, preset = {}) {
       grab();
       if ((f.cat === 'otra' || f.cat === 'tv') && !f.title) { toast('ponele un nombre'); sheet.querySelector('[name=title]').focus(); return; }
       if (existing) {
-        Object.assign(findEv(existing.id), { cat: f.cat, title: f.title, start: f.start, end: f.end, date: f.date });
+        Object.assign(findEv(existing.id), { cat: f.cat, title: f.title, start: f.start, end: f.end, date: f.date, u: now() });
         toast('¡guardado!');
       } else {
         const mon = mondayOf(f.date), dates = [f.date, ...[...rep].map(i => addDays(mon, i))];
-        dates.forEach(date => S.events.push({ id: uid(), date, cat: f.cat, title: f.title, start: f.start, end: f.end, status: 'pending' }));
-        if (f.cat === 'tv' && f.title && !S.shows.includes(f.title)) S.shows.push(f.title);
+        dates.forEach(date => S.events.push({ id: uid(), date, cat: f.cat, title: f.title, start: f.start, end: f.end, status: 'pending', u: now() }));
+        if (f.cat === 'tv' && f.title && !S.shows.includes(f.title)) { S.shows.push(f.title); S.showsU = now(); }
         toast(dates.length > 1 ? `¡${dates.length} agregadas!` : '¡agregada!');
       }
       ui.sel = f.date; ui.wk = mondayOf(f.date); closeSheet(); commit();
@@ -245,20 +344,21 @@ function openOptions(ev) {
   sheet.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     const a = b.dataset.act;
-    if (a === 'done') { const was = ev.status === 'done'; ev.status = was ? 'pending' : 'done'; beep(!was); if (!was) toast('+1 moneda'); closeSheet(); return commit(); }
+    if (a === 'done') { const was = ev.status === 'done'; ev.status = was ? 'pending' : 'done'; touch(ev); beep(!was); if (!was) toast('+1 moneda'); closeSheet(); return commit(); }
     if (a === 'rep') { repOpen = !repOpen; return draw(); }
     if (a === 'mday') { day = b.dataset.d; return draw(); }
     if (a === 'move') {
       const n = { id: uid(), date: day, cat: ev.cat, title: ev.title, start: sheet.querySelector('[name=ms]').value || ev.start,
-        end: sheet.querySelector('[name=me]').value || ev.end, status: 'pending', from: ev.id };
-      ev.status = 'moved'; ev.movedTo = n.id; S.events.push(n);
+        end: sheet.querySelector('[name=me]').value || ev.end, status: 'pending', from: ev.id, u: now() };
+      ev.status = 'moved'; ev.movedTo = n.id; touch(ev); S.events.push(n);
       toast(`movida al ${shortDay(day).toLowerCase()}`); closeSheet(); return commit();
     }
-    if (a === 'skip') { ev.status = 'skipped'; beep(false); closeSheet(); return commit(); }
+    if (a === 'skip') { ev.status = 'skipped'; touch(ev); beep(false); closeSheet(); return commit(); }
     if (a === 'edit') { closeSheet(); return openForm(ev); }
     if (a === 'del') {
       S.events = S.events.filter(x => x !== ev);
-      S.events.forEach(x => { if (x.movedTo === ev.id) { x.status = 'pending'; delete x.movedTo; } });
+      if (!ev.demo) S.deleted[ev.id] = now();
+      S.events.forEach(x => { if (x.movedTo === ev.id) { x.status = 'pending'; delete x.movedTo; touch(x); } });
       toast('borrada'); closeSheet(); return commit();
     }
   };
@@ -281,6 +381,7 @@ document.addEventListener('click', e => {
     case 'tick': {
       if (!ev) return;
       if (ev.status === 'done') { ev.status = 'pending'; beep(false); } else { ev.status = 'done'; beep(); pop(b, '+1'); }
+      touch(ev);
       return commit();
     }
     case 'opts': return ev && openOptions(ev);
@@ -288,7 +389,11 @@ document.addEventListener('click', e => {
     case 'lastweek': S.seenWeek = addDays(mondayOf(today()), -7); ui.wk = S.seenWeek; ui.sel = S.seenWeek; ui.tab = 'stats'; window.scrollTo(0, 0); return commit();
     case 'pickshow': { const i = +b.dataset.i; ui.pick = ui.pick === i ? null : i; return render(); }
     case 'editlist': ui.editList = !ui.editList; ui.pick = null; return render();
-    case 'rmshow': S.shows.splice(+b.dataset.i, 1); return commit();
+    case 'rmshow': S.shows.splice(+b.dataset.i, 1); S.showsU = now(); return commit();
+    case 'lastmonth': S.seenMonth = addMonths(monthOf(today()), -1); ui.month = S.seenMonth; ui.mode = 'mes'; ui.tab = 'stats'; ui.detail = null; window.scrollTo(0, 0); return commit();
+    case 'mode': ui.mode = b.dataset.m; ui.detail = null; return render();
+    case 'mo': ui.month = addMonths(ui.month, +b.dataset.n); ui.detail = null; return render();
+    case 'acct': return openAccount();
     case 'detail': ui.detail = ui.detail === b.dataset.k ? null : b.dataset.k; return render();
     case 'export': {
       const t = JSON.stringify(S);
@@ -300,7 +405,7 @@ document.addEventListener('click', e => {
       try {
         const o = JSON.parse($('#imp').value);
         if (!Array.isArray(o.events)) throw new Error();
-        S = { ...S, ...o }; toast('¡restaurado!'); commit();
+        S = { ...S, ...o, deleted: { ...(S.deleted || {}), ...(o.deleted || {}) } }; S.events.forEach(touch); toast('¡restaurado!'); commit();
       } catch { toast('respaldo inválido'); }
     }
   }
@@ -312,20 +417,26 @@ document.addEventListener('submit', e => {
   const fd = new FormData(form);
   if (form.dataset.form === 'addshow') {
     const v = String(fd.get('title') || '').trim();
-    if (v && !S.shows.includes(v)) S.shows.push(v);
+    if (v && !S.shows.includes(v)) { S.shows.push(v); S.showsU = now(); }
     return commit();
   }
   if (form.dataset.form === 'watch') {
     const title = ui.pick >= 0 ? S.shows[ui.pick] : String(fd.get('title') || '').trim();
     if (!title) return toast('¿qué viste?');
     const date = fd.get('date') || ui.sel;
-    S.events.push({ id: uid(), date, cat: 'tv', title, start: fd.get('start') || '21:00', end: fd.get('end') || '22:00', status: 'done' });
-    if (!S.shows.includes(title)) S.shows.push(title);
+    S.events.push({ id: uid(), date, cat: 'tv', title, start: fd.get('start') || '21:00', end: fd.get('end') || '22:00', status: 'done', u: now() });
+    if (!S.shows.includes(title)) { S.shows.push(title); S.showsU = now(); }
     ui.pick = null; beep(); toast('+1 moneda'); commit();
   }
 });
 
 render();
+
+initCloud({
+  onUser: () => { render(); accountRedraw(); },
+  onRemote,
+  onStatus: () => { renderChrome(); accountRedraw(); },
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

@@ -39,10 +39,14 @@ const DEFAULTS = {
   events: [],   // {id, date, cat, title, start, end, status: pending|done|moved|skipped, movedTo?, from?, demo?}
   shows: ['One Piece', 'The Office', 'Stranger Things', 'Peli de terror', 'Anime nuevo'],
   sound: true,
-  seenWeek: '', // lunes de la última semana cuyo resumen ya vio
+  seenWeek: '',  // lunes de la última semana cuyo resumen ya vio
+  seenMonth: '', // 'YYYY-MM' del último mes cuyo resumen ya vio
   demoSeeded: false,
+  deleted: {},   // id -> momento en que se borró (para sincronizar borrados)
+  showsU: 0,     // última vez que se editó la lista de series
 };
 
+export const now = () => Date.now();
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 export function load() {
@@ -56,7 +60,7 @@ export function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } 
 
 function seedDemo(s) {
   const t = today(), m = addDays(t, 1);
-  const mk = (date, cat, start, end, title, status = 'pending') => ({ id: uid(), date, cat, start, end, title, status, demo: true });
+  const mk = (date, cat, start, end, title, status = 'pending') => ({ id: uid(), date, cat, start, end, title, status, demo: true, u: 0 });
   s.events = [
     mk(t, 'ejercicio', '08:00', '09:00', 'Salir a correr', 'done'),
     mk(t, 'programar', '10:00', '12:00', 'Proyecto personal', 'done'),
@@ -76,8 +80,8 @@ export const eventsBetween = (s, a, b) => s.events.filter(e => e.date >= a && e.
 /** pendiente de un día que ya pasó = no hecho */
 export const statusOf = e => (e.status === 'pending' && e.date < today() ? 'skipped' : e.status);
 
-export function weekStats(s, monday) {
-  const ev = eventsBetween(s, monday, addDays(monday, 6));
+export function rangeStats(s, from, to) {
+  const ev = eventsBetween(s, from, to);
   const n = { done: 0, moved: 0, skipped: 0, pending: 0 };
   const lists = { done: [], moved: [], skipped: [], pending: [] };
   ev.forEach(e => { const st = statusOf(e); n[st]++; lists[st].push(e); });
@@ -90,8 +94,61 @@ export function weekStats(s, monday) {
     const plan = es.reduce((a, e) => a + dur(e), 0);
     const done = es.filter(e => e.status === 'done').reduce((a, e) => a + dur(e), 0);
     const name = c.id === 'otra' ? [...new Set(es.map(e => e.title))].slice(0, 3).join(', ') : c.name;
-    return { cat: c, name, plan, done };
-  }).filter(Boolean).sort((a, b) => b.done - a.done);
+    return { cat: c, name, plan, done, count: es.filter(e => e.status === 'done').length };
+  }).filter(Boolean).sort((a, b) => b.done - a.done || b.plan - a.plan);
   const total = rows.reduce((a, r) => a + r.done, 0);
-  return { ev, n, lists, due, pct, rows, total };
+  const activeDays = new Set(lists.done.map(e => e.date)).size;
+  return { ev, n, lists, due, pct, rows, total, activeDays };
 }
+export const weekStats = (s, monday) => rangeStats(s, monday, addDays(monday, 6));
+
+/* ---------- meses ('YYYY-MM') ---------- */
+export const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+export const monthOf = d => d.slice(0, 7);
+export const monthName = ym => MESES[+ym.slice(5, 7) - 1];
+export const monthStart = ym => `${ym}-01`;
+export const monthEnd = ym => { const [y, m] = ym.split('-').map(Number); return ymd(new Date(y, m, 0, 12)); };
+export const addMonths = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1, 12); return ymd(d).slice(0, 7); };
+export const monthStats = (s, ym) => rangeStats(s, monthStart(ym), monthEnd(ym));
+
+/** Resumen chico de un mes, para guardar en la nube. */
+export function monthSummary(s, ym) {
+  const M = monthStats(s, ym);
+  return {
+    month: ym, pct: M.pct, totalMin: M.total, activeDays: M.activeDays, counts: M.n,
+    rows: M.rows.map(r => ({ cat: r.cat.id, name: r.name, doneMin: r.done, planMin: r.plan, times: r.count })),
+  };
+}
+
+/* ---------- sincronización: unir datos de dos dispositivos ---------- */
+/** Une el estado local con el de la nube. Gana el cambio más nuevo de cada actividad. */
+export function mergeStates(local, remote) {
+  if (!remote) return local;
+  const deleted = { ...(remote.deleted || {}), ...(local.deleted || {}) };
+  const byId = new Map();
+  for (const e of [...(remote.events || []), ...(local.events || [])]) {
+    const prev = byId.get(e.id);
+    if (!prev || (e.u || 0) > (prev.u || 0)) byId.set(e.id, e);
+  }
+  const events = [...byId.values()].filter(e => !deleted[e.id]);
+  const showsFromRemote = (remote.showsU || 0) > (local.showsU || 0);
+  return {
+    ...local,
+    events,
+    deleted,
+    shows: showsFromRemote ? remote.shows : local.shows,
+    showsU: Math.max(local.showsU || 0, remote.showsU || 0),
+    seenWeek: [local.seenWeek || '', remote.seenWeek || ''].sort().pop(),
+    seenMonth: [local.seenMonth || '', remote.seenMonth || ''].sort().pop(),
+    demoSeeded: true,
+  };
+}
+/** Lo que se sube a la nube (el sonido queda en cada dispositivo). */
+export const cloudPayload = s => ({
+  events: s.events.filter(e => !e.demo),
+  deleted: s.deleted || {},
+  shows: s.shows,
+  showsU: s.showsU || 0,
+  seenWeek: s.seenWeek || '',
+  seenMonth: s.seenMonth || '',
+});

@@ -12,7 +12,9 @@ Es una PWA: se instala en el celular desde el navegador y funciona sin internet.
 - **Repetir:** al crear una actividad se puede copiar a otros días de la misma semana.
 - **Series y pelis:** lista editable; se toca una y se anota cuándo se vio.
 - **Resumen:** % cumplido de lo que ya tocaba hacer, cumplidas / reprogramadas / no hechas (con detalle), y horas hechas contra planificadas por actividad.
-- **Respaldo:** copiar y restaurar los datos (viven en el `localStorage` del celular).
+- **Resumen del mes:** podio de las 3 actividades a las que más tiempo le dedicó, ranking completo, horas totales, días activos y lo que más vio. Al empezar un mes nuevo aparece un aviso para ver el anterior.
+- **Cuenta de Google:** al entrar, todo se guarda en la nube (Firebase) y se sincroniza entre dispositivos. Cada mes también se guarda un resumen en `users/{uid}/months/{YYYY-MM}`.
+- **Respaldo:** copiar y restaurar los datos a mano.
 
 Una actividad pendiente de un día que ya pasó cuenta como "no hecha".
 
@@ -23,7 +25,10 @@ index.html        estructura y carga de fuentes
 css/styles.css    estilos (variables de color arriba de todo)
 js/icons.js       íconos pixel 8×8 dibujados con '#'
 js/store.js       categorías, fechas, guardado y cálculo del resumen
-js/app.js         vistas (día, series, stats), paneles y eventos
+js/app.js         vistas (día, series, stats semana/mes), paneles y eventos
+js/cloud.js       login con Google y guardado en Firestore
+js/firebase-config.js   configuración de tu proyecto de Firebase
+firestore.rules   reglas de seguridad (cada uno ve solo lo suyo)
 manifest.json     datos para instalar la app
 sw.js             service worker (cache offline)
 icons/            íconos de la app
@@ -43,13 +48,28 @@ npx serve .
 
 y abrir `http://localhost:8000`.
 
+## Conectar Firebase (login con Google)
+
+Sin esto la app funciona igual, pero solo guarda en el celular.
+
+1. Entrá a [console.firebase.google.com](https://console.firebase.google.com) → **Agregar proyecto** (Analytics no hace falta).
+2. **Authentication → Comenzar → Método de acceso → Google → Habilitar** (elegí el correo de asistencia y guardá).
+3. **Authentication → Configuración → Dominios autorizados → Agregar dominio:** `belen-humbert.github.io`. (`localhost` ya viene; si probás con Live Server agregá también `127.0.0.1`.)
+4. **Firestore Database → Crear base de datos** → modo producción → ubicación `southamerica-east1` (San Pablo).
+5. En **Firestore → Reglas**, pegá el contenido de `firestore.rules` y publicá.
+6. **Configuración del proyecto (engranaje) → Tus apps → ícono `</>` (Web)** → registrá la app y copiá el objeto `firebaseConfig` en `js/firebase-config.js`.
+
+Esos datos de configuración no son secretos (identifican el proyecto); lo que protege la información son las reglas de Firestore.
+
+Cómo funciona la sincronización: cada actividad guarda cuándo se cambió por última vez y, al unir datos de dos dispositivos, gana el cambio más nuevo. Los borrados también se sincronizan. Firestore guarda una copia local, así que sin internet se sigue usando y sube los cambios cuando vuelve la conexión.
+
 ## Publicar en GitHub Pages
 
 1. Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)`.
 2. Abrir `https://belen-humbert.github.io/pixel-calendar/` en el celular.
 3. Android (Chrome): menú ⋮ → *Instalar app*. iPhone (Safari): compartir → *Agregar a inicio*.
 
-Cada vez que publiques cambios, subí el número de `CACHE` en `sw.js` (`pixelplan-v2` → `pixelplan-v3`) para que el celular baje la versión nueva.
+Cada vez que publiques cambios, subí el número de `CACHE` en `sw.js` (`pixelplan-v3` → `pixelplan-v4`) para que el celular baje la versión nueva.
 
 ## Personalizar
 
