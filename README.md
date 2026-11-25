@@ -63,7 +63,16 @@ Esos datos de configuración no son secretos (identifican el proyecto); lo que p
 
 Cómo funciona la sincronización: cada actividad guarda cuándo se cambió por última vez y, al unir datos de dos dispositivos, gana el cambio más nuevo. Los borrados también se sincronizan. Firestore guarda una copia local, así que sin internet se sigue usando y sube los cambios cuando vuelve la conexión.
 
-## Publicar en GitHub Pages
+## Publicar en Vercel
+
+1. En [vercel.com](https://vercel.com) → **Add New… → Project** → importar `pixel-calendar` desde GitHub.
+2. Framework Preset: **Other**. Sin build command ni output directory (es un sitio estático).
+3. **Deploy**. Cada `git push` a `main` vuelve a publicar solo.
+4. Agregar el dominio de Vercel (por ejemplo `pixel-calendar.vercel.app`) en Firebase → Authentication → Configuración → **Dominios autorizados**.
+
+`vercel.json` hace que `sw.js`, `manifest.json` y el código no queden cacheados, así el celular baja siempre la versión nueva.
+
+## Publicar en GitHub Pages (alternativa)
 
 1. Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)`.
 2. Abrir `https://belen-humbert.github.io/pixel-calendar/` en el celular.
