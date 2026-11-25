@@ -56,6 +56,14 @@ function pop(el, txt) {
   p.className = 'pop'; p.textContent = txt; p.style.left = `${r.left + r.width / 2 - 14}px`; p.style.top = `${r.top - 4}px`;
   document.body.appendChild(p); setTimeout(() => p.remove(), 800);
 }
+/* ---------- personaje ---------- */
+const avatar = $('#avatar');
+avatar.innerHTML = pixelArt(ART.alejo, PAL.alejo, 34, 'class="f-idle"') + pixelArt(ART.alejoBlink, PAL.alejo, 34, 'class="f-blink"');
+$('#spider').innerHTML = pixelArt(ART.spider, PAL.spider, 14);
+setInterval(() => { avatar.classList.add('blink'); setTimeout(() => avatar.classList.remove('blink'), 160); }, 3800);
+function jump() { avatar.classList.remove('jump'); void avatar.offsetWidth; avatar.classList.add('jump'); }
+const FRASES = ['¡a darle!', '¡vos podés!', '¡modo productivo!', '¡una moneda más!', '¡nivel desbloqueado!', '¡hoy la rompés!'];
+
 let tt;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => el.classList.remove('on'), 1900); }
 
@@ -355,7 +363,7 @@ function openOptions(ev) {
   sheet.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     const a = b.dataset.act;
-    if (a === 'done') { const was = ev.status === 'done'; ev.status = was ? 'pending' : 'done'; touch(ev); beep(!was); if (!was) toast('+1 moneda'); closeSheet(); return commit(); }
+    if (a === 'done') { const was = ev.status === 'done'; ev.status = was ? 'pending' : 'done'; touch(ev); beep(!was); if (!was) setTimeout(jump, 200); if (!was) toast('+1 moneda'); closeSheet(); return commit(); }
     if (a === 'rep') { repOpen = !repOpen; return draw(); }
     if (a === 'mday') { day = b.dataset.d; return draw(); }
     if (a === 'move') {
@@ -383,6 +391,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && veil.class
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || sheet.contains(b)) return;
   if (b.dataset.tab) { ui.tab = b.dataset.tab; ui.detail = null; ui.pick = null; ui.editList = false; render(); window.scrollTo(0, 0); return; }
+  if (b.id === 'avatar') { jump(); beep(); return toast(FRASES[Math.floor(Math.random() * FRASES.length)]); }
   if (b.id === 'fab') return openForm(null, ui.tab === 'series' ? { cat: 'tv' } : {});
   if (b.id === 'sound') { S.sound = !S.sound; commit(); beep(); return; }
   const a = b.dataset.act, ev = findEv(b.dataset.id);
@@ -391,7 +400,7 @@ document.addEventListener('click', e => {
     case 'wk': { const n = +b.dataset.n; ui.wk = addDays(ui.wk, n); ui.sel = addDays(ui.sel, n); ui.detail = null; return render(); }
     case 'tick': {
       if (!ev) return;
-      if (ev.status === 'done') { ev.status = 'pending'; beep(false); } else { ev.status = 'done'; beep(); pop(b, '+1'); }
+      if (ev.status === 'done') { ev.status = 'pending'; beep(false); } else { ev.status = 'done'; beep(); pop(b, '+1'); jump(); }
       touch(ev);
       return commit();
     }

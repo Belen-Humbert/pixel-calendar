@@ -1,11 +1,11 @@
 // Pixel Plan — service worker: guarda la app para que abra sin internet.
 // Subí el número de versión cada vez que publiques cambios.
-const CACHE = 'pixelplan-v5';
+const CACHE = 'pixelplan-v6';
 const FILES = [
   './', './index.html', './manifest.json',
   './css/styles.css',
   './js/icons.js', './js/store.js', './js/app.js', './js/cloud.js', './js/firebase-config.js',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
+  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.png'
 ];
 
 self.addEventListener('install', e => {

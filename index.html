@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Pixel Plan">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +27,11 @@
 
   <div class="app">
     <header class="top">
-      <span class="brand">pixel plan</span>
+      <div class="who">
+        <button class="avatar" id="avatar" aria-label="Personaje"></button>
+        <span class="spider" aria-hidden="true"><i class="thread"></i><span id="spider"></span></span>
+        <span class="brand">pixel plan</span>
+      </div>
       <div class="top-r">
         <span class="pill" id="coins" title="Monedas: actividades cumplidas"></span>
         <button class="icon-btn acct" id="acct" data-act="acct" aria-label="Cuenta"></button>

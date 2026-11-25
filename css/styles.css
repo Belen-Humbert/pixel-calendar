@@ -312,3 +312,20 @@ textarea.field { height: 90px; padding: 10px 14px; font-size: 14px; resize: vert
 .gbtn:disabled { opacity: .6; }
 .fine { margin: -4px 0 0; text-align: center; font-size: 12px; color: var(--dim); }
 @media (prefers-reduced-motion: reduce) { .float { animation: none; } }
+
+/* personaje y arañita */
+.who { position: relative; display: flex; align-items: center; gap: 24px; }
+.avatar { width: 40px; height: 44px; display: grid; place-items: end center; position: relative; }
+.avatar svg { grid-area: 1 / 1; }
+.avatar .f-blink { visibility: hidden; }
+.avatar.blink .f-idle { visibility: hidden; }
+.avatar.blink .f-blink { visibility: visible; }
+.avatar.jump { animation: jump .5s steps(5); }
+@keyframes jump { 40% { transform: translateY(-12px); } 70% { transform: translateY(-4px); } }
+.spider {
+  position: absolute; left: 44px; top: calc(-18px - env(safe-area-inset-top));
+  display: flex; flex-direction: column; align-items: center; pointer-events: none;
+}
+.spider .thread { width: 2px; height: 20px; background: #4a4680; animation: dangle 3s steps(4) infinite alternate; }
+@keyframes dangle { to { height: 34px; } }
+@media (prefers-reduced-motion: reduce) { .avatar.jump, .spider .thread { animation: none; } }
