@@ -1,6 +1,6 @@
 // Pixel Plan — service worker: guarda la app para que abra sin internet.
 // Subí el número de versión cada vez que publiques cambios.
-const CACHE = 'pixelplan-v4';
+const CACHE = 'pixelplan-v5';
 const FILES = [
   './', './index.html', './manifest.json',
   './css/styles.css',

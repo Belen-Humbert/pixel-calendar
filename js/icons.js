@@ -40,3 +40,48 @@ const PATHS = Object.fromEntries(Object.entries(GRIDS).map(([k, rows]) => [
 export function icon(name, size = 20, color = 'currentColor') {
   return `<svg width="${size}" height="${size}" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"><path d="${PATHS[name] || ''}" fill="${color}"/></svg>`;
 }
+
+/** Dibujo pixel de varios colores: cada letra de la grilla es un color de la paleta. */
+export function pixelArt(rows, palette, width, extra = '') {
+  const w = rows[0].length, h = rows.length, byColor = {};
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (palette[ch]) (byColor[ch] = byColor[ch] || []).push(`M${x} ${y}h1v1h-1z`);
+  }));
+  const paths = Object.entries(byColor).map(([ch, d]) => `<path d="${d.join('')}" fill="${palette[ch]}"/>`).join('');
+  return `<svg width="${width}" height="${Math.round((width * h) / w)}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true" ${extra}>${paths}</svg>`;
+}
+
+export const ART = {
+  // nube con flecha para "guardar en la nube"
+  cloud: [
+    '......................',
+    '.........LLLL.........',
+    '.......LLLLLLLL.......',
+    '......LLLLLDDLLL......',
+    '...LLLLLLLDDDDLLLL....',
+    '..LLLLLLLDDDDDDLLLLL..',
+    '.LLLLLLLDDDDDDDDLLLLL.',
+    'LLLLLLLLLLLDDLLLLLLLLL',
+    'LLLLLLLLLLLDDLLLLLLLLL',
+    'LLLLLLLLLLLDDLLLLLLLLL',
+    'SSSSSSSSSSSDDSSSSSSSSS',
+    '.SSSSSSSSSSSSSSSSSSSS.',
+  ],
+  coin: ['.YYYY.', 'YYOYYY', 'YYOYYY', 'YYOYYY', 'YYOYYY', '.YYYY.'],
+  // G de Google en pixel
+  g: [
+    '..RRRR..',
+    '.RR..RR.',
+    'RR......',
+    'YY..BBBB',
+    'YY....BB',
+    'YY....BB',
+    '.GG..BB.',
+    '..GGGG..',
+  ],
+};
+export const PAL = {
+  cloud: { L: '#d9d6f0', S: '#a9a4d6', D: '#17162a' },
+  coin: { Y: '#ffd35a', O: '#c9971c' },
+  g: { R: '#ea4335', Y: '#fbbc05', G: '#34a853', B: '#4285f4' },
+};

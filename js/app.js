@@ -1,4 +1,4 @@
-import { icon } from './icons.js';
+import { icon, pixelArt, ART, PAL } from './icons.js';
 import {
   CATS, CAT, dotColor, DN, DLONG, MES, ymd, parse, addDays, weekIdx, mondayOf, today, hm, plusMins,
   dur, fmtH, shortDay, uid, now, load, save, eventsOn, eventsBetween, statusOf, weekStats,
@@ -241,15 +241,26 @@ function openAccount() {
     const when = cloud.lastSync ? new Date(cloud.lastSync).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
     const st = { ok: `guardado en la nube${when ? ' · ' + when : ''}`, syncing: 'guardando…', error: 'sin conexión: se guarda cuando vuelva internet', idle: '' }[cloud.status] || '';
     sheet.innerHTML = `<div class="grab"></div>
-      <div class="sheet-head"><button class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x', 12)}</button><div><h2>${u ? 'tu cuenta' : 'guardar en la nube'}</h2></div></div>
+      <div class="sheet-head"><button class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x', 12)}</button><div><h2>${u ? 'tu cuenta' : 'guardá tu progreso'}</h2></div></div>
       ${!cloudConfigured ? `<p class="muted" style="margin:0">Todavía falta conectar Firebase (ver README). Mientras tanto los datos se guardan solo en este celular.</p>`
       : u ? `<div class="acct-card">${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="chip" style="background:#2b2950">${icon('user', 20, '#b9b5e0')}</span>`}
           <div><b>${esc(u.name)}</b><span>${esc(u.email)}</span></div></div>
         <p class="sync-st">${icon('cloud', 14, cloud.status === 'error' ? '#ff8c99' : '#5be38a')} ${esc(st)}</p>
         <p class="muted" style="margin:0;font-size:14px">Tus actividades y estadísticas se guardan en tu cuenta. Si cambiás de celular, entrás con Google y aparecen todas.</p>
         <button class="btn o block" data-act="logout">cerrar sesión</button>`
-      : `<p class="muted" style="margin:0">Entrá con tu cuenta de Google para no perder nunca tus datos y guardar tus estadísticas de cada mes.</p>
-        <button class="btn y block" data-act="login">${icon('google', 16, '#17162a')} entrar con google</button>`}`;
+      : `<div class="cloud-hero">
+          ${pixelArt(ART.coin, PAL.coin, 22, 'class="float c1"')}
+          ${pixelArt(ART.cloud, PAL.cloud, 154, 'class="float main"')}
+          ${pixelArt(ART.coin, PAL.coin, 16, 'class="float c2"')}
+        </div>
+        <p class="cloud-lead">Entrá con tu cuenta de Google y tus partidas quedan guardadas para siempre.</p>
+        <ul class="perks">
+          <li>${icon('cloud', 16, '#7fa6ff')}<span>Si cambiás o perdés el celu, no perdés nada</span></li>
+          <li>${icon('trophy', 16, '#ffd35a')}<span>Se guarda el resumen de cada mes</span></li>
+          <li>${icon('repeat', 16, '#5be38a')}<span>Lo ves igual en el celu y en la compu</span></li>
+        </ul>
+        <button class="gbtn" data-act="login">${pixelArt(ART.g, PAL.g, 20)}<span>Continuar con Google</span></button>
+        <p class="fine">Solo usamos tu nombre, tu foto y tu mail para identificar tu cuenta.</p>`}`;
   };
   sheet.onclick = async e => {
     const b = e.target.closest('button'); if (!b) return;
