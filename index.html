@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pixel Plan</title>
+  <meta name="description" content="Agenda semanal con estética pixel">
+  <meta name="theme-color" content="#17162a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pixel Plan">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=DM+Sans:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <svg class="stars" viewBox="0 0 390 180" preserveAspectRatio="xMidYMin slice" shape-rendering="crispEdges" aria-hidden="true">
+    <rect x="300" y="18" width="3" height="3" fill="#6f6aa8"/><rect x="250" y="70" width="3" height="3" fill="#4a4680"/>
+    <rect x="352" y="104" width="3" height="3" fill="#6f6aa8"/><rect x="196" y="34" width="2" height="2" fill="#4a4680"/>
+    <rect x="40" y="150" width="2" height="2" fill="#4a4680"/>
+  </svg>
+
+  <div class="app">
+    <header class="top">
+      <span class="brand">pixel plan</span>
+      <div class="top-r">
+        <span class="pill" id="coins" title="Monedas: actividades cumplidas"></span>
+        <button class="icon-btn" id="sound" aria-label="Sonido"></button>
+      </div>
+    </header>
+    <main id="main"></main>
+  </div>
+
+  <button class="fab" id="fab" aria-label="Agregar actividad"></button>
+
+  <nav class="tabs"><div role="tablist">
+    <button role="tab" data-tab="dia"></button>
+    <button role="tab" data-tab="series"></button>
+    <button role="tab" data-tab="stats"></button>
+  </div></nav>
+
+  <div class="veil" id="veil"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
