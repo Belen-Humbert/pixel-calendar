@@ -97,7 +97,9 @@ svg { display: block; flex: none; }
 .ev .ttl { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
 .ev .sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
 .ev .tag { font-family: var(--px); font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
-.ev.done .ttl { text-decoration: line-through; color: var(--dim); }
+.ev.done { border-color: #2f6b47; background: #1d2a35; }
+.ev.done .ttl { color: var(--ink); }
+.ev.done .sub { color: #8fcfa6; }
 .ev.moved, .ev.skipped { opacity: .55; }
 .ev.moved .ttl, .ev.skipped .ttl { text-decoration: line-through; }
 .tick { width: 44px; height: 44px; display: grid; place-items: center; flex: none; }
