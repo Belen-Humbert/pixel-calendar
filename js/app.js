@@ -114,7 +114,6 @@ function renderDay() {
   const ev = eventsOn(S, ui.sel), d = parse(ui.sel), isToday = ui.sel === today();
   const done = ev.filter(e => e.status === 'done').length;
   let banners = '';
-  if (S.events.some(e => e.demo)) banners += `<div class="banner"><p>Estas actividades son <b>ejemplos</b> para que veas cómo funciona.</p><button class="btn o sm" data-act="nodemo">borrar ejemplos</button></div>`;
   const lastMon = addDays(mondayOf(today()), -7);
   if (S.seenWeek !== lastMon && eventsBetween(S, lastMon, addDays(lastMon, 6)).length)
     banners += `<div class="banner"><p>¡Terminó la semana! Mirá cuánto le dedicaste a cada cosa.</p><button class="btn y sm" data-act="lastweek">ver resumen</button></div>`;
@@ -405,7 +404,6 @@ document.addEventListener('click', e => {
       return commit();
     }
     case 'opts': return ev && openOptions(ev);
-    case 'nodemo': S.events = S.events.filter(x => !x.demo); toast('¡a empezar!'); return commit();
     case 'lastweek': S.seenWeek = addDays(mondayOf(today()), -7); ui.wk = S.seenWeek; ui.sel = S.seenWeek; ui.tab = 'stats'; window.scrollTo(0, 0); return commit();
     case 'pickshow': { const i = +b.dataset.i; ui.pick = ui.pick === i ? null : i; return render(); }
     case 'editlist': ui.editList = !ui.editList; ui.pick = null; return render();

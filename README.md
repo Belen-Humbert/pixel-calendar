@@ -78,11 +78,10 @@ Cómo funciona la sincronización: cada actividad guarda cuándo se cambió por 
 2. Abrir `https://belen-humbert.github.io/pixel-calendar/` en el celular.
 3. Android (Chrome): menú ⋮ → *Instalar app*. iPhone (Safari): compartir → *Agregar a inicio*.
 
-Cada vez que publiques cambios, subí el número de `CACHE` en `sw.js` (`pixelplan-v8` → `pixelplan-v9`) para que el celular baje la versión nueva.
+Cada vez que publiques cambios, subí el número de `CACHE` en `sw.js` (`pixelplan-v9` → `pixelplan-v10`) para que el celular baje la versión nueva.
 
 ## Personalizar
 
 - **Colores e íconos por categoría:** `CATS` en `js/store.js`.
 - **Dibujar un ícono:** agregá una grilla de 8 filas × 8 caracteres en `GRIDS` (`js/icons.js`).
 - **Series precargadas:** `shows` en `DEFAULTS` (`js/store.js`).
-- **Ejemplos del primer uso:** `seedDemo()` en `js/store.js`.

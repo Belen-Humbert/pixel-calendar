@@ -53,26 +53,13 @@ export function load() {
   let s;
   try { s = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) || 'null') || {}) }; }
   catch { s = { ...DEFAULTS }; }
-  if (!s.demoSeeded && !s.events.length) seedDemo(s);
+  // la app arranca vacía: si quedaron ejemplos de versiones anteriores, se borran
+  s.events = s.events.filter(e => !e.demo);
+  s.demoSeeded = true;
   return s;
 }
 export function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* sin espacio o modo privado */ } }
 
-function seedDemo(s) {
-  const t = today(), m = addDays(t, 1);
-  const mk = (date, cat, start, end, title, status = 'pending') => ({ id: uid(), date, cat, start, end, title, status, demo: true, u: 0 });
-  s.events = [
-    mk(t, 'ejercicio', '08:00', '09:00', 'Salir a correr', 'done'),
-    mk(t, 'programar', '10:00', '12:00', 'Proyecto personal', 'done'),
-    mk(t, 'programar', '15:00', '16:30', 'Curso de React'),
-    mk(t, 'play', '17:30', '18:30', 'Partida online'),
-    mk(t, 'lectura', '19:00', '19:45', 'Leer antes de cenar'),
-    mk(t, 'novia', '21:00', '23:00', 'Horario de novia'),
-    mk(m, 'estudiar', '10:00', '12:00', 'Estudiar inglés'),
-    mk(m, 'trabajo', '14:00', '18:00', 'Trabajo'),
-  ];
-  s.demoSeeded = true;
-}
 
 /* ---------- consultas ---------- */
 export const eventsOn = (s, d) => s.events.filter(e => e.date === d).sort((a, b) => mins(a.start) - mins(b.start));
