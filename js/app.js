@@ -2,14 +2,15 @@ import { icon, pixelArt, ART, PAL } from './icons.js';
 import {
   CATS, CAT, dotColor, DN, DLONG, MES, ymd, parse, addDays, weekIdx, mondayOf, today, hm, plusMins,
   dur, fmtH, shortDay, uid, now, load, save, eventsOn, eventsBetween, statusOf, weekStats,
-  monthStats, monthOf, monthName, addMonths, monthSummary, mergeStates, cloudPayload,
+  monthStats, monthOf, monthName, monthStart, monthEnd, addMonths, monthSummary, mergeStates, cloudPayload,
 } from './store.js';
 import { cloud, cloudConfigured, initCloud, login, logout, pushSoon } from './cloud.js';
 
 /* ---------- estado ---------- */
 let S = load();
 save(S);
-const ui = { sel: today(), wk: mondayOf(today()), tab: 'dia', detail: null, pick: null, editList: false, mode: 'semana', month: monthOf(today()) };
+const ui = { sel: today(), wk: mondayOf(today()), tab: 'dia', detail: null, pick: null, editList: false, mode: 'semana', month: monthOf(today()), cal: 'semana', calMonth: monthOf(today()) };
+try { ui.cal = localStorage.getItem('pixelplan.cal') === 'mes' ? 'mes' : 'semana'; } catch { /* sin storage */ }
 
 const $ = s => document.querySelector(s);
 const main = $('#main'), veil = $('#veil'), sheet = $('#sheet');
@@ -128,11 +129,39 @@ function renderDay() {
       <span class="dots">${cats.map(c => `<i style="background:${dotColor(c)}"></i>`).join('')}</span></button>`;
   }).join('');
 
+  const list = `<div class="list">${ev.length ? ev.map(evRow).join('') : `<div class="empty"><span class="px">día libre</span>Tocá el botón amarillo para cargar lo que vas a hacer.</div>`}</div>`;
+  const calSeg = `<div class="seg" role="group" aria-label="Vista">${['semana', 'mes'].map(m => `<button data-act="cal" data-m="${m}" aria-pressed="${ui.cal === m}">${m}</button>`).join('')}</div>`;
+
+  if (ui.cal === 'mes') {
+    const ym = ui.calMonth, first = monthStart(ym), start = mondayOf(first);
+    const cells = Array.from({ length: 42 }, (_, i) => {
+      const day = addDays(start, i), es = eventsOn(S, day), out = monthOf(day) !== ym;
+      const allDone = es.length && es.every(e => e.status === 'done' || e.status === 'moved') && es.some(e => e.status === 'done');
+      const cats = [...new Set(es.map(e => e.cat))].slice(0, 4);
+      return `<button class="mcell ${out ? 'out' : ''} ${day === ui.sel ? 'sel' : ''} ${day === today() ? 'today' : ''} ${allDone ? 'alldone' : ''}" data-act="day" data-d="${day}" aria-label="${DLONG[weekIdx(day)]} ${parse(day).getDate()}${es.length ? `, ${es.length} actividades` : ''}">
+        <span class="num">${parse(day).getDate()}</span><span class="dots">${cats.map(c => `<i style="background:${dotColor(c)}"></i>`).join('')}</span></button>`;
+    });
+    // si la última fila es toda del mes siguiente, no la mostramos
+    const rows = monthOf(addDays(start, 35)) !== ym ? 35 : 42;
+    const doneMonth = eventsBetween(S, first, monthEnd(ym)).filter(e => e.status === 'done').length;
+    main.innerHTML = `${banners}
+      <div class="calbar"><h1 class="h1">${monthName(ym)}</h1>${calSeg}</div>
+      <div class="weeknav"><button data-act="mnav" data-n="-1" aria-label="Mes anterior">${icon('left', 14)}</button>
+        <span>${doneMonth} ${doneMonth === 1 ? 'actividad cumplida' : 'actividades cumplidas'}</span>
+        <button data-act="mnav" data-n="1" aria-label="Mes siguiente">${icon('right', 14)}</button></div>
+      <div class="mgrid head">${DN.map(n => `<span>${n}</span>`).join('')}</div>
+      <div class="mgrid">${cells.slice(0, rows).join('')}</div>
+      <div class="legend"><span><i class="lg-done"></i>todo hecho</span><span><i class="lg-today"></i>hoy</span></div>
+      <div class="dayline"><span class="px">${DLONG[weekIdx(ui.sel)].toLowerCase()} ${d.getDate()}${isToday ? ' · hoy' : ''}</span>${ev.length ? `<b>${done}/${ev.length}</b>` : ''}</div>
+      ${list}`;
+    return;
+  }
+
   main.innerHTML = `${banners}
     <div class="hero"><div><div class="dow">${DLONG[weekIdx(ui.sel)]}${isToday ? ' · hoy' : ''}</div><div class="date">${d.getDate()} ${MES[d.getMonth()]}</div></div>
       ${ev.length ? `<div class="score"><b>${done}/${ev.length}</b><span>hechas${isToday ? ' hoy' : ''}</span></div>` : ''}</div>
-    ${weekNav()}<div class="days">${days}</div>
-    <div class="list">${ev.length ? ev.map(evRow).join('') : `<div class="empty"><span class="px">día libre</span>Tocá el botón amarillo para cargar lo que vas a hacer.</div>`}</div>`;
+    <div class="calbar sm">${weekNav()}${calSeg}</div><div class="days">${days}</div>
+    ${list}`;
 }
 
 /* ---------- vista: series ---------- */
@@ -334,7 +363,7 @@ function openForm(existing, preset = {}) {
         if (f.cat === 'tv' && f.title && !S.shows.includes(f.title)) { S.shows.push(f.title); S.showsU = now(); }
         toast(dates.length > 1 ? `¡${dates.length} agregadas!` : '¡agregada!');
       }
-      ui.sel = f.date; ui.wk = mondayOf(f.date); closeSheet(); commit();
+      ui.sel = f.date; ui.wk = mondayOf(f.date); ui.calMonth = monthOf(f.date); closeSheet(); commit();
     }
   };
   draw(); veil.classList.add('on');
@@ -395,8 +424,14 @@ document.addEventListener('click', e => {
   if (b.id === 'sound') { S.sound = !S.sound; commit(); beep(); return; }
   const a = b.dataset.act, ev = findEv(b.dataset.id);
   switch (a) {
-    case 'day': ui.sel = b.dataset.d; return render();
-    case 'wk': { const n = +b.dataset.n; ui.wk = addDays(ui.wk, n); ui.sel = addDays(ui.sel, n); ui.detail = null; return render(); }
+    case 'day': ui.sel = b.dataset.d; ui.wk = mondayOf(ui.sel); ui.calMonth = monthOf(ui.sel); return render();
+    case 'cal': ui.cal = b.dataset.m; ui.calMonth = monthOf(ui.sel); try { localStorage.setItem('pixelplan.cal', ui.cal); } catch { /* sin storage */ } return render();
+    case 'mnav': {
+      ui.calMonth = addMonths(ui.calMonth, +b.dataset.n);
+      ui.sel = ui.calMonth === monthOf(today()) ? today() : monthStart(ui.calMonth);
+      ui.wk = mondayOf(ui.sel); return render();
+    }
+    case 'wk': { const n = +b.dataset.n; ui.wk = addDays(ui.wk, n); ui.sel = addDays(ui.sel, n); ui.calMonth = monthOf(ui.sel); ui.detail = null; return render(); }
     case 'tick': {
       if (!ev) return;
       if (ev.status === 'done') { ev.status = 'pending'; beep(false); } else { ev.status = 'done'; beep(); pop(b, '+1'); jump(); }

@@ -331,3 +331,32 @@ textarea.field { height: 90px; padding: 10px 14px; font-size: 14px; resize: vert
 .spider .thread { width: 2px; height: 20px; background: #4a4680; animation: dangle 3s steps(4) infinite alternate; }
 @keyframes dangle { to { height: 34px; } }
 @media (prefers-reduced-motion: reduce) { .avatar.jump, .spider .thread { animation: none; } }
+
+/* vista de mes */
+.calbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.calbar .h1 { font-size: clamp(22px, 7vw, 26px); }
+.calbar.sm { margin-bottom: 8px; }
+.calbar.sm .weeknav { flex: 1; margin-bottom: 0; }
+.calbar.sm .weeknav button { width: 32px; }
+.mgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.mgrid.head { margin: 2px 0 4px; }
+.mgrid.head span { text-align: center; font-size: 11px; font-weight: 700; color: var(--dim); }
+.mcell {
+  height: 50px; border: 2px solid var(--line-soft); border-radius: 9px; padding: 5px 0 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+}
+.mcell .num { font-family: var(--px); font-size: 13px; line-height: 1; }
+.mcell .dots { display: flex; gap: 2px; height: 5px; }
+.mcell .dots i { width: 5px; height: 5px; }
+.mcell.out { opacity: .3; }
+.mcell.alldone { background: #1d2a35; border-color: #3f8f5e; }
+.mcell.today { border-color: var(--coin); }
+.mcell.sel { background: var(--coin); border-color: var(--coin); color: var(--bg); }
+.legend { display: flex; gap: 14px; margin: 8px 0 14px; font-size: 11px; color: var(--muted); font-weight: 700; }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; border: 2px solid; }
+.legend .lg-done { border-color: #3f8f5e; background: #1d2a35; }
+.legend .lg-today { border-color: var(--coin); }
+.dayline { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.dayline .px { font-size: 15px; }
+.dayline b { font-family: var(--px); font-weight: 400; font-size: 14px; color: var(--ok); }
